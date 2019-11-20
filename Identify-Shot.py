@@ -13,33 +13,47 @@ def histogram2d_Vx_Vy(flow) :
 	Vy = flow[:,:,0].flatten()
 	hist, xbins, ybins = np.histogram2d(Vx, Vy, bins=(500,500), range=[[-50,50],[-50,50]])
 	#hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
-	hist = normalize(hist).astype('float32');
+	hist = normalize(hist).astype('float32')
 	return hist
 
 def generate_rltb_masks() :
-	mask_r = np.zeros((500,500))
-	mask_l = np.zeros((500,500))
-	mask_t = np.zeros((500,500))
-	mask_b = np.zeros((500,500))
+	mask_r = np.zeros((500,500)).astype('uint8')
+	mask_l = np.zeros((500,500)).astype('uint8')
+	mask_t = np.zeros((500,500)).astype('uint8')
+	mask_b = np.zeros((500,500)).astype('uint8')
 
 	for i in range (500) :
 		for j in range (500) :
 			if i < j and i < 500 - j :
 				mask_t[i,j] = 1
 			elif i < j and i >= 500 - j :
-				mask_r[i,j] = 1
-			elif i >= j and i < 500 - j :
 				mask_l[i,j] = 1
+			elif i >= j and i < 500 - j :
+				mask_r[i,j] = 1
 			else :
 				mask_b[i,j] = 1
-	return mask_r, mask_l, mask_t, mask_b
+	return [mask_r, mask_l, mask_t, mask_b]
 
 
-	
-generate_rltb_masks()
+def find_direction(src) :
+	sum_tot = np.sum(src)
+	i = -1
+
+	masks_rltb = generate_rltb_masks()
+
+	rltb = [cv2.bitwise_and(src, src, mask = mask) for mask in masks_rltb]
+	sums_rltb = [np.sum(im) for im in rltb]
+	print(sums_rltb)
+	maxi = max(sums_rltb)
+	if maxi / sum_tot > 0.8 :
+		i = sums_rltb.index(maxi)
+
+	return i
+
+
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Pan.avi")
+cap = cv2.VideoCapture("./Vidéos/ZOOM O TRAVELLING.mp4")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
@@ -99,7 +113,11 @@ cv2.destroyAllWindows()
 # On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
 mean_hist = mean_hist * 255 / index
 # On met au maximum toutes les valeurs non nulles de mean_hist (puisque les pixels non-centraux ont toujours des valeurs faibles)
-final = mean_hist > 50;
+final = mean_hist > 50
+final = final.astype('uint8')
 plt.imshow(final, 'gray')
+i = find_direction(final)
+print(i)
 plt.show()
+
 
