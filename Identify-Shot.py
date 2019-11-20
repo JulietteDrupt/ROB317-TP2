@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 def normalize(hist) :
 	valmax = np.amax(hist)
@@ -13,6 +14,7 @@ def histogram2d_Vx_Vy(flow) :
 	hist, xbins, ybins = np.histogram2d(Vx, Vy, bins=(500,500), range=[[-50,50],[-50,50]])
 	hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
 	return hist
+
 	
 
 #Ouverture du flux video
@@ -29,6 +31,8 @@ hsv[:,:,1] = 255 # Toutes les couleurs sont saturées au maximum
 index = 1
 ret, frame2 = cap.read()
 next = cv2.cvtColor(frame2,cv2.COLOR_BGR2GRAY) 
+
+mean_hist = np.zeros((500,500,3))
 
 while(ret):
 	index += 1
@@ -49,6 +53,10 @@ while(ret):
 	cv2.imshow('Image et Champ de vitesses (Farnebäck)',result)
 
 	hist = histogram2d_Vx_Vy(flow)
+
+	# Pour calculer l'histogramme 2D moyen
+	mean_hist += hist;
+
 	cv2.imshow('Histogramme', hist)
 
 	k = cv2.waitKey(15) & 0xff
@@ -65,3 +73,9 @@ while(ret):
 
 cap.release()
 cv2.destroyAllWindows()
+
+# On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
+mean_hist = mean_hist * 255 / index;
+plt.imshow(mean_hist)
+plt.show()
+

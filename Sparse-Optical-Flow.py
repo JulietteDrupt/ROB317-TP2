@@ -26,7 +26,7 @@ def histogram2d_Vx_Vy(good_old, good_new):
 		
 	
 
-cap = cv2.VideoCapture('./Vidéos/Extrait1-Cosmos_Laundromat1(340p).m4v')
+cap = cv2.VideoCapture('./Vidéos/ZOOM O TRAVELLING.mp4')
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 
@@ -78,7 +78,8 @@ while(ret):
 	if k == 27:
 		break
 	elif k == ord('s'):
-		cv2.imwrite('OF_PyrLk%04d.png'%index,img)
+		#cv2.imwrite('OF_PyrLk%04d.png'%index,img)
+		cv2.imwrite('hist.png',hist*255)
 
 	# Mis à jour image et détection des nouveaux points
 	p0 = cv2.goodFeaturesToTrack(frame_gray, mask = None, **feature_params)
