@@ -12,13 +12,34 @@ def histogram2d_Vx_Vy(flow) :
 	Vx = flow[:,:,1].flatten()
 	Vy = flow[:,:,0].flatten()
 	hist, xbins, ybins = np.histogram2d(Vx, Vy, bins=(500,500), range=[[-50,50],[-50,50]])
-	hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
+	#hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
+	hist = normalize(hist).astype('float32');
 	return hist
 
+def generate_rltb_masks() :
+	mask_r = np.zeros((500,500))
+	mask_l = np.zeros((500,500))
+	mask_t = np.zeros((500,500))
+	mask_b = np.zeros((500,500))
+
+	for i in range (500) :
+		for j in range (500) :
+			if i < j and i < 500 - j :
+				mask_t[i,j] = 1
+			elif i < j and i >= 500 - j :
+				mask_r[i,j] = 1
+			elif i >= j and i < 500 - j :
+				mask_l[i,j] = 1
+			else :
+				mask_b[i,j] = 1
+	return mask_r, mask_l, mask_t, mask_b
+
+
 	
+generate_rltb_masks()
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/ZOOM O TRAVELLING.mp4")
+cap = cv2.VideoCapture("./Vidéos/Pan.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
@@ -32,7 +53,7 @@ index = 1
 ret, frame2 = cap.read()
 next = cv2.cvtColor(frame2,cv2.COLOR_BGR2GRAY) 
 
-mean_hist = np.zeros((500,500,3))
+mean_hist = np.zeros((500,500))
 
 while(ret):
 	index += 1
@@ -74,8 +95,11 @@ while(ret):
 cap.release()
 cv2.destroyAllWindows()
 
+
 # On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
-mean_hist = mean_hist * 255 / index;
-plt.imshow(mean_hist)
+mean_hist = mean_hist * 255 / index
+# On met au maximum toutes les valeurs non nulles de mean_hist (puisque les pixels non-centraux ont toujours des valeurs faibles)
+final = mean_hist > 50;
+plt.imshow(final, 'gray')
 plt.show()
 
