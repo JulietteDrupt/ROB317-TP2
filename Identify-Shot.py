@@ -45,15 +45,24 @@ def find_direction(src) :
 	sums_rltb = [np.sum(im) for im in rltb]
 	print(sums_rltb)
 	maxi = max(sums_rltb)
-	if maxi / sum_tot > 0.8 :
+	if maxi / sum_tot > 0.7 :
 		i = sums_rltb.index(maxi)
 
 	return i
 
 
+def trav_h_or_pan(src) :
+	sumy = np.sum(src,0)
+	sumx = np.sum(src,1)
+	longueur = min(max(sumx),250)
+	l1 = np.mean(sumy[int(250 - longueur) : int(250 - longueur / 2)])
+	l2 = np.mean(sumy[int(250 - longueur/2) : 250])
+	print (l1, l2, longueur)
+
+
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/ZOOM O TRAVELLING.mp4")
+cap = cv2.VideoCapture("./Vidéos/Pan.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
@@ -118,6 +127,9 @@ final = final.astype('uint8')
 plt.imshow(final, 'gray')
 i = find_direction(final)
 print(i)
+
+trav_h_or_pan(final)
+
 plt.show()
 
 
