@@ -94,6 +94,10 @@ def trav_h_or_pan(src,side) :
 	print(l1,l2,longueur)
 	return l1 > l2
 
+def trav_v_or_tilt(src,side) :
+	sum_tot = np.sum(src)
+	return sum_tot < (500**2)/3
+
 
 def find_shot(src) :
 	i = find_direction(src)
@@ -113,13 +117,21 @@ def find_shot(src) :
 			print ("Travelling")
 	elif i == 2 :
 		print ("Tilt vers le bas ou travelling arrière")
+		if trav_v_or_tilt(src,i) :
+			print ("Tilt")
+		else :
+			print ("Travelling")
 	else :
 		print ("Tilt vers le haut ou travelling avant")
+		if trav_v_or_tilt(src,i) :
+			print ("Tilt")
+		else :
+			print ("Travelling")
 
 
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Tilt.avi")
+cap = cv2.VideoCapture("./Vidéos/Travelling2.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
