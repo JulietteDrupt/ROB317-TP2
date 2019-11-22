@@ -24,14 +24,28 @@ def generate_rltb_masks() :
 
 	for i in range (500) :
 		for j in range (500) :
+			if j > 250 :
+				mask_r[i,j] = 1
+			if j <= 250 :
+				mask_l[i,j] = 1
+			if i > 250 :
+				mask_b[i,j] = 1
+			if i <= 250 :
+				mask_t[i,j] = 1
+
+	"""
+	for i in range (500) :
+		for j in range (500) :
 			if i < j and i < 500 - j :
 				mask_t[i,j] = 1
 			elif i < j and i >= 500 - j :
-				mask_l[i,j] = 1
-			elif i >= j and i < 500 - j :
 				mask_r[i,j] = 1
+			elif i >= j and i < 500 - j :
+				mask_l[i,j] = 1
 			else :
 				mask_b[i,j] = 1
+	"""
+
 	return [mask_r, mask_l, mask_t, mask_b]
 
 
@@ -47,22 +61,65 @@ def find_direction(src) :
 	maxi = max(sums_rltb)
 	if maxi / sum_tot > 0.7 :
 		i = sums_rltb.index(maxi)
+	print(i)
 
 	return i
 
 
-def trav_h_or_pan(src) :
+def trav_h_or_pan(src,side) :
+	"""
+	side = 0 pour droite et side = 1 pour gauche
+	"""
+	kernel = np.ones((3,3),np.uint8)
+	src = cv2.erode(src,kernel,iterations = 1)
 	sumy = np.sum(src,0)
 	sumx = np.sum(src,1)
 	longueur = min(max(sumx),250)
-	l1 = np.mean(sumy[int(250 - longueur) : int(250 - longueur / 2)])
-	l2 = np.mean(sumy[int(250 - longueur/2) : 250])
-	print (l1, l2, longueur)
+
+	a,b,c,d = 0,0,0,0
+
+	if side == 1 :
+		a = int(250 - longueur)
+		b = int(250 - longueur / 2)
+		c = int(250 - longueur / 2)
+		d = 250
+	else :
+		a = int(250 + longueur / 2)
+		b = int(250 + longueur)
+		c = 250
+		d = int(250 + longueur / 2)
+
+	l1 = np.mean(sumy[a : b])
+	l2 = np.mean(sumy[c : d])
+	print(l1,l2,longueur)
+	return l1 > l2
+
+
+def find_shot(src) :
+	i = find_direction(src)
+	if i == -1 :
+		print ("Plan fixe, rotation ou zoom")
+	elif i == 0 :
+		print ("Déplacement horizontal vers la gauche")
+		if trav_h_or_pan(src,i) :
+			print ("Pan")
+		else :
+			print ("Travelling")
+	elif i == 1 :
+		print ("Déplacement horizontal vers la droite")
+		if trav_h_or_pan(src,i) :
+			print ("Pan")
+		else :
+			print ("Travelling")
+	elif i == 2 :
+		print ("Tilt vers le bas ou travelling arrière")
+	else :
+		print ("Tilt vers le haut ou travelling avant")
 
 
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Pan.avi")
+cap = cv2.VideoCapture("./Vidéos/Tilt.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
@@ -122,13 +179,10 @@ cv2.destroyAllWindows()
 # On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
 mean_hist = mean_hist * 255 / index
 # On met au maximum toutes les valeurs non nulles de mean_hist (puisque les pixels non-centraux ont toujours des valeurs faibles)
-final = mean_hist > 50
+final = mean_hist > np.median(mean_hist)
 final = final.astype('uint8')
 plt.imshow(final, 'gray')
-i = find_direction(final)
-print(i)
-
-trav_h_or_pan(final)
+find_shot(final)
 
 plt.show()
 
