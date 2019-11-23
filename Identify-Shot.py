@@ -24,13 +24,13 @@ def generate_rltb_masks() :
 
 	for i in range (500) :
 		for j in range (500) :
-			if j > 250 :
+			if j > 260 : # Comme pour les masques suivants, on masque les 10 premières lignes ou colones (selon le masque) à partir du centre. En effet, si les pixels sont concentrés au centre, peu importe leur répartition exacte, qui faussera la donne plus qu'autre chose.
 				mask_r[i,j] = 1
-			if j <= 250 :
+			if j <= 240 :
 				mask_l[i,j] = 1
-			if i > 250 :
+			if i > 260 :
 				mask_b[i,j] = 1
-			if i <= 250 :
+			if i <= 240 :
 				mask_t[i,j] = 1
 
 	"""
@@ -106,12 +106,13 @@ def ta_or_not(src) :
 	srcmed = src > np.median(src)
 	srcmed = srcmed.astype('uint8')
 	sumtot = np.sum(srcmed)
-	return (sumtot > 0.1 * 500 ** 2)
+	return (sumtot > 0.2 * 500 ** 2)
 	
 
-def fixed_ta_or_zoom(src) :
-	srcmed = src > np.median(src)
-	srcmed = srcmed.astype('uint8')
+def fixed_or_zoom(src) :
+	sumtot = np.sum(src)
+	#print(sumtot, sumtot / 500 ** 2)
+	return (sumtot > 0.0003 * 500 **2)
 
 
 
@@ -132,7 +133,11 @@ def find_shot(src) :
 			if ta :
 				print ("Travelling avant")
 			else :
-				fixed_ta_or_zoom(src)
+				zoom = fixed_or_zoom(src)
+				if zoom :
+					print ("Zoom avant")
+				else :
+					print ("Plan fixe")
 
 
 	elif i == 0 :
@@ -159,7 +164,7 @@ def find_shot(src) :
 
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Travelling2.avi")
+cap = cv2.VideoCapture("./Vidéos/ZOOM O TRAVELLING.mp4")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
