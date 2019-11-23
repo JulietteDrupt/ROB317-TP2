@@ -91,47 +91,64 @@ def trav_h_or_pan(src,side) :
 
 	l1 = np.mean(sumy[a : b])
 	l2 = np.mean(sumy[c : d])
-	print(l1,l2,longueur)
-	return l1 > l2
+	#print(l1,l2,longueur)
+	return (0.8 * l1 > l2)
 
-def trav_v_or_tilt(src,side) :
-	sum_tot = np.sum(src)
-	return sum_tot < (500**2)/3
+
+
+def rotation_or_not(src) :
+	# Si c'est une rotation alors on a une zone blanche beaucoup plus large que dans le cas d'un tilt, d'un plan fixe ou d'un zoom : on va ici considérer qu'à partir d'1/10 de l'image cette surface blache est suffisante pour reconnaître une rotation.
+	sumtot = np.sum(src)
+	return (sumtot > 0.1 * 500 ** 2)
+	
+
+def fixed_tilt_or_zoom(src) :
+	srcmed = src > np.median(src)
+	srcmed = srcmed.astype('uint8')
+
 
 
 def find_shot(src) :
-	i = find_direction(src)
+
+	# On met au maximum toutes les valeurs de mean_hist supérieures à un seuil (puisque les pixels non-centraux ont toujours des valeurs faibles). Cela permet de voir les "cônes" des travellings horizontaux de manière satisfaisante. En revanche, src50 n'est pas exploitable pour les tilts puisqu'une partie importante des pixels significatifs pour reconnaître ce plan a des valeurs très faibles comparées aux autres.
+	src50 = src > 50
+	src50 = src50.astype('uint8')
+
+	i = find_direction(src50)
 	if i == -1 :
-		print ("Plan fixe, rotation ou zoom")
+		print ("Plan fixe, tilt, rotation ou zoom")
+		rot = rotation_or_not(src50)
+		if rot :
+			print ("Rotation")
+		else :
+			fixed_tilt_or_zoom(src)
+
+
 	elif i == 0 :
 		print ("Déplacement horizontal vers la gauche")
-		if trav_h_or_pan(src,i) :
+		ok = trav_h_or_pan(src50,i)
+		if ok :
 			print ("Pan")
 		else :
 			print ("Travelling")
 	elif i == 1 :
 		print ("Déplacement horizontal vers la droite")
-		if trav_h_or_pan(src,i) :
+		ok = trav_h_or_pan(src50,i)
+		if ok :
 			print ("Pan")
 		else :
 			print ("Travelling")
 	elif i == 2 :
-		print ("Tilt vers le bas ou travelling arrière")
-		if trav_v_or_tilt(src,i) :
-			print ("Tilt")
-		else :
-			print ("Travelling")
+		print ("Tilt vers le bas")
 	else :
-		print ("Tilt vers le haut ou travelling avant")
-		if trav_v_or_tilt(src,i) :
-			print ("Tilt")
-		else :
-			print ("Travelling")
+		print ("Tilt vers le haut")
+	return src50
+
 
 
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Travelling2.avi")
+cap = cv2.VideoCapture("./Vidéos/Rotation.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
@@ -190,12 +207,9 @@ cv2.destroyAllWindows()
 
 # On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
 mean_hist = mean_hist * 255 / index
-# On met au maximum toutes les valeurs non nulles de mean_hist (puisque les pixels non-centraux ont toujours des valeurs faibles)
-final = mean_hist > np.median(mean_hist)
-final = final.astype('uint8')
-plt.imshow(final, 'gray')
-find_shot(final)
 
+src50 = find_shot(mean_hist)
+plt.imshow(src50,'gray')
 plt.show()
 
 
