@@ -100,9 +100,16 @@ def rotation_or_not(src) :
 	# Si c'est une rotation alors on a une zone blanche beaucoup plus large que dans le cas d'un tilt, d'un plan fixe ou d'un zoom : on va ici considérer qu'à partir d'1/10 de l'image cette surface blache est suffisante pour reconnaître une rotation.
 	sumtot = np.sum(src)
 	return (sumtot > 0.1 * 500 ** 2)
+
+
+def ta_or_not(src) :
+	srcmed = src > np.median(src)
+	srcmed = srcmed.astype('uint8')
+	sumtot = np.sum(srcmed)
+	return (sumtot > 0.1 * 500 ** 2)
 	
 
-def fixed_tilt_or_zoom(src) :
+def fixed_ta_or_zoom(src) :
 	srcmed = src > np.median(src)
 	srcmed = srcmed.astype('uint8')
 
@@ -116,12 +123,16 @@ def find_shot(src) :
 
 	i = find_direction(src50)
 	if i == -1 :
-		print ("Plan fixe, tilt, rotation ou zoom")
+		print ("Plan fixe, travelling avant, rotation ou zoom")
 		rot = rotation_or_not(src50)
 		if rot :
 			print ("Rotation")
 		else :
-			fixed_tilt_or_zoom(src)
+			ta = ta_or_not(src)
+			if ta :
+				print ("Travelling avant")
+			else :
+				fixed_ta_or_zoom(src)
 
 
 	elif i == 0 :
@@ -148,7 +159,7 @@ def find_shot(src) :
 
 
 #Ouverture du flux video
-cap = cv2.VideoCapture("./Vidéos/Rotation.avi")
+cap = cv2.VideoCapture("./Vidéos/Travelling2.avi")
 
 cv2.namedWindow('Histogramme', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Image et Champ de vitesses (Farnebäck)', cv2.WINDOW_NORMAL)
