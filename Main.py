@@ -39,8 +39,8 @@ def cutDetection(histogramDifferences, grayFrames, n_match = 5,plot = False):
     if(plot):
         plt.figure()
         plt.plot(np.arange(0,len(histogramDifferences)),histogramDifferences,label="Histogram difference")
-        plt.plot(np.arange(0,len(diffDifferences)),np.abs(diffDifferences),label="Absolute value of the derivative")
-        plt.plot(np.arange(0,len(histogramDifferences)),np.ones(len(histogramDifferences))*Tcut,label="Cut detection threashold")
+        plt.plot(np.arange(0,len(diffDifferences)),np.abs(diffDifferences),label="Absolute value of the derivative of the histogram difference")
+        plt.plot(np.arange(0,len(histogramDifferences)),np.ones(len(histogramDifferences))*Tcut,label="Cut detection threshold")
         plt.title("Cut detection")
         plt.legend()
         plt.show()
@@ -104,8 +104,13 @@ def cutDetection(histogramDifferences, grayFrames, n_match = 5,plot = False):
     if(plot):
         plt.figure()
         plt.plot(np.arange(0,len(diffDifferences)),diffDifferences,label="Aboslute value of the first derivative of the histogram difference")
+        labelCounter = 0
         for index in cutIndex:
-            plt.plot(index,diffDifferences[index],'*',color='red',label="Cut")
+            if(labelCounter == 0):
+                labelCounter+=1
+                plt.plot(index,diffDifferences[index],'*',color='red',label="Cut")
+            else:
+                plt.plot(index,diffDifferences[index],'*',color='red')
         plt.title("Detected cuts")
         plt.legend()
         plt.show()
@@ -216,9 +221,15 @@ def localDissolveDetection(histogramDifferences, averageIntensity, grayFrames, r
 
     if(plot):        
         plt.figure()
-        plt.plot(np.arange(0,len(avgIntensity)),avgIntensity,label="Average gray scale intensity")
+        plt.plot(np.arange(0,len(avgIntensity[refIndex[0]:refIndex[-1]])),avgIntensity[refIndex[0]:refIndex[-1]],label="Average gray scale intensity")
+        labelCounter = 0
+        maxIntensity = np.max(avgIntensity[refIndex[0]:refIndex[-1]]) + 5
         for d in dissolve:
-            plt.plot(d,np.ones(len(d))*10,color='red',label="Dissolve")
+            if(labelCounter == 0):
+                labelCounter += 1
+                plt.plot(d,maxIntensity*np.ones(len(d)),'--',color='red',label="Dissolve")
+            else:
+                plt.plot(d,maxIntensity*np.ones(len(d)),'--',color='red')
         plt.title("Detected dissolves")
         plt.legend()
         plt.show()
@@ -475,7 +486,7 @@ def shotsIdentification(shots,flow):
 
 ###MAIN###
 
-cap = cv2.VideoCapture('Extrait1-Cosmos_Laundromat1(340p).m4v')
+cap = cv2.VideoCapture('Extrait3-Vertigo-Dream_Scene(320p).m4v')
 ret, frame = cap.read() 
 
 #Are the frames in gray scale or in color ?
@@ -607,7 +618,7 @@ while(ret and counter<500):
 print("-- ENDING VIDEO --")
 
 cutIndex = cutDetection(differences,allFrames)
-dissolveSequences = globalDissolveDetection(cutIndex,differences,avgIntensity,allFrames)
+dissolveSequences = globalDissolveDetection(cutIndex,differences,avgIntensity,allFrames,plot=True)
 shots = extractShots(cutIndex,dissolveSequences)
 identification = shotsIdentification(shots,allFlow)
 keyFrame = keyFrameExtraction(allFrames,shots) 
