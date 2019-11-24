@@ -319,20 +319,9 @@ def generate_rltb_masks() :
 			if i <= 240 :
 				mask_t[i,j] = 1
 
-	"""
-	for i in range (500) :
-		for j in range (500) :
-			if i < j and i < 500 - j :
-				mask_t[i,j] = 1
-			elif i < j and i >= 500 - j :
-				mask_r[i,j] = 1
-			elif i >= j and i < 500 - j :
-				mask_l[i,j] = 1
-			else :
-				mask_b[i,j] = 1
-	"""
-
 	return [mask_r, mask_l, mask_t, mask_b]
+
+
 
 def find_direction(src) :
 	sum_tot = np.sum(src)
@@ -475,7 +464,7 @@ def shotsIdentification(shots,flow):
 
 ###MAIN###
 
-cap = cv2.VideoCapture('Extrait1-Cosmos_Laundromat1(340p).m4v')
+cap = cv2.VideoCapture('Vidéos/Extrait1-Cosmos_Laundromat1(340p).m4v')
 ret, frame = cap.read() 
 
 #Are the frames in gray scale or in color ?
