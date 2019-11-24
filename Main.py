@@ -448,33 +448,20 @@ def find_shot(src) :
         string = "Tilt vers le haut"
     return src50, string
 
-def shotsIdentification(shots):
+def shotsIdentification(shots,flow):
     Id = []
 
     for shot in shots:
         print("Identifying shot : ")
         print(shot)
+
+        shotFlow = flow[shot[0]:shot[-1]]
         mean_hist = np.zeros((500,500))
 
-        index = 1
-
-        for i in range(shot[0],shot[-1]):
-            index+=1
-            flow = cv2.calcOpticalFlowFarneback(allFrames[i],allFrames[i+1],None, 
-                                                pyr_scale = 0.5,# Taux de réduction pyramidal
-                                                levels = 3, # Nombre de niveaux de la pyramide
-                                                winsize = 15, # Taille de fenêtre de lissage (moyenne) des coefficients polynomiaux
-                                                iterations = 3, # Nb d'itérations par niveau
-                                                poly_n = 7, # Taille voisinage pour approximation polynomiale
-                                                poly_sigma = 1.5, # E-T Gaussienne pour calcul dérivées 
-                                                flags = 0)	
-            hist = histogram2d_Vx_Vy(flow)
-
-            # Pour calculer l'histogramme 2D moyen
-            mean_hist += hist;
-
         # On divise la somme des histogrammes successifs par leur nombre et on ramène à des valeurs entre 0 et 255 en multipliant par 255.
-        mean_hist = mean_hist * 255 / index
+        for hist in shotFlow:
+            mean_hist += hist
+        mean_hist = mean_hist * 255 / len(shotFlow)
 
         src50,string = find_shot(mean_hist)
         plt.imshow(src50,'gray')
@@ -509,6 +496,8 @@ allFrames = []
 differences = []
 avgIntensity = []
 
+allFlow = []
+
 if(color):
     #Compute 2D-histogram
     h, xedges, yedges = np.histogram2d(frame_yuv[:,:,1].flatten(),frame_yuv[:,:,2].flatten(),bins=(256,256),range=[[0, 255], [0, 255]])
@@ -516,7 +505,8 @@ if(color):
     #Display in color - not recommanded
     #im=ax.imshow(normalise(h),cmap='gray')
     #Display in gray scale
-    cv2.imshow('Histogram',h)
+    #cv2.imshow("Color histogram",h)
+    #cv2.waitKey(0)
 
 else:
     #Plot initialisation
@@ -526,6 +516,8 @@ else:
     h, bins = np.histogram(frame_gray.flatten(),bins=256,range=[0,255])
     #Display histogram
     im=ax.bar(np.arange(0,256),h)
+
+prevFrame = frame_gray
 
 print("-- STARTING VIDEO --")
 counter=0
@@ -552,7 +544,7 @@ while(ret and counter<500):
         #Update in color - not recommanded
         #im.set_data(normalise(h1))
         #Update in gray scale
-        cv2.imshow('Histogram',h1)
+        cv2.imshow('Color histogram',h1)
 
     else:
         #Compute 1D-histogram
@@ -574,8 +566,39 @@ while(ret and counter<500):
     #Iteration
     h=h1
 
+    #Compute optical flow
+    hsv = np.zeros_like(frame) # Image nulle de même taille que frame1 (affichage OF)
+    hsv[:,:,1] = 255 # Toutes les couleurs sont saturées au maximum
+
+    flow = cv2.calcOpticalFlowFarneback(prevFrame,frame_gray,None, 
+                                        pyr_scale = 0.5,# Taux de réduction pyramidal
+                                        levels = 3, # Nombre de niveaux de la pyramide
+                                        winsize = 9, # Taille de fenêtre de lissage (moyenne) des coefficients polynomiaux - w
+                                        iterations = 3, # Nb d'itérations par niveau
+                                        poly_n = 5, # Taille voisinage pour approximation polynomiale - Applicability
+                                        poly_sigma = 1.5, # E-T Gaussienne pour calcul dérivées
+                                        flags = 0)
+
+    mag, ang = cv2.cartToPolar(flow[:,:,0], flow[:,:,1]) # Conversion cartésien vers polaire
+    hsv[:,:,0] = (ang*180)/(2*np.pi) # Teinte (codée sur [0..179] dans OpenCV) <--> Argument
+    hsv[:,:,2] = (mag*255)/np.amax(mag) # Valeur <--> Norme 
+
+    #Display optical flow
+    bgr = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+    cv2.imshow('Optical flow',bgr)
+
+    #Compute flow histogram
+    hist = histogram2d_Vx_Vy(flow)
+    allFlow.append(hist)
+
+    #Display histogram
+    cv2.imshow('Flow histogram', hist)
+
+    #Iteration
+    prevFrame = frame_gray
+
     #Display frame
-    cv2.imshow("film",frame)
+    cv2.imshow("Film",frame)
 
     k = cv2.waitKey(15) & 0xff
     if k == 27:
@@ -586,7 +609,7 @@ print("-- ENDING VIDEO --")
 cutIndex = cutDetection(differences,allFrames)
 dissolveSequences = globalDissolveDetection(cutIndex,differences,avgIntensity,allFrames)
 shots = extractShots(cutIndex,dissolveSequences)
-identification = shotsIdentification(shots)
+identification = shotsIdentification(shots,allFlow)
 keyFrame = keyFrameExtraction(allFrames,shots) 
 
 
