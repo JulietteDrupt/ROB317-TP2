@@ -15,6 +15,8 @@ def normalise(I):
   I = (255/(Imax-Imin))*I - (255/(Imax-Imin))*Imin
   return(I)
 
+#####################SHOT-CUT######################################################
+
 #Computes the absolute difference between two pictures of the same size
 def difference(I,J):
     return(np.sum(np.abs(I-J))/(2*np.size(I)))
@@ -317,6 +319,8 @@ def keyFrameExtraction(grayFrames,shots,method = "entropy", plot = False):
     print(keyIndex)
     return(keyFrames)
 
+#####################HISTOGRAM-CALCULATION######################################################
+
 def normalize(hist) :
     valmax = np.amax(hist)
     valmin = np.amin(hist)
@@ -330,6 +334,9 @@ def histogram2d_Vx_Vy(flow) :
 	#hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
 	hist = normalize(hist).astype('float32')
 	return hist
+
+
+#####################SHOT-IDENTIFICATION######################################################
 
 def generate_rltb_masks() :
 	mask_r = np.zeros((500,500)).astype('uint8')
@@ -502,7 +509,7 @@ def shotsIdentification(shots,flow):
     print(Id)
     return(Id)
 
-###MAIN###
+#####################MAIN######################################################
 
 cap = cv2.VideoCapture('Extrait4-Entracte-Poursuite_Corbillard(358p).m4v')
 ret, frame = cap.read() 
