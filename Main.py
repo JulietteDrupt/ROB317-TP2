@@ -71,11 +71,6 @@ def cutDetection(histogramDifferences, grayFrames, n_match = 10,plot = False):
         img1 = grayFrames[max(0,index[i]-2)]
         img2 = grayFrames[min(index[i]+2,len(grayFrames))]
 
-        #DEBUG
-        cv2.imshow('pic1',img1)
-        cv2.imshow('pic2',img2)
-        cv2.waitKey(0)
-
         #Create ORB detector
         orb = cv2.ORB_create(nfeatures = 500,#Par défaut : 500
                         scaleFactor = 1.2,#Par défaut : 1.2
@@ -160,7 +155,8 @@ def localDissolveDetection(histogramDifferences, averageIntensity, grayFrames, r
     dissolveIndex = []
     
     for i in range(len(tempIndex)):
-            dissolveIndex.append(tempIndex[i][0])
+            if(tempIndex[i][0] < refIndex[-1]-refIndex[0]):
+                dissolveIndex.append(tempIndex[i][0])
 
     print("First estimation of the dissolve indices : ")
     print(dissolveIndex)
@@ -176,14 +172,11 @@ def localDissolveDetection(histogramDifferences, averageIntensity, grayFrames, r
     #Detect windows with a continuous intensity increase -> Dissolves
     for i in range(len(dissolveIndex)):
         delta = diffIntensity[dissolveIndex[i]]
-        print(len(diffIntensity))
-        print(dissolveIndex)
         if(len(dissolve)!=0 and dissolve[-1][-1]>dissolveIndex[i]):
             continue
         else:
             counterNeg = 0
             counterPos = 0
-            print(refIndex[-1])
             while(np.sign(diffIntensity[dissolveIndex[i]+counterPos]) == np.sign(delta)):
                 if(dissolveIndex[i]+counterPos+1 >= len(diffIntensity)):
                     break
@@ -241,9 +234,9 @@ def localDissolveDetection(histogramDifferences, averageIntensity, grayFrames, r
 
     if(plot):        
         plt.figure()
-        plt.plot(np.arange(0,len(avgIntensity[refIndex[0]:refIndex[-1]])),avgIntensity[refIndex[0]:refIndex[-1]],label="Average gray scale intensity")
+        plt.plot(np.arange(0,len(avgIntensity)),avgIntensity,label="Average gray scale intensity")
         labelCounter = 0
-        maxIntensity = np.max(avgIntensity[refIndex[0]:refIndex[-1]]) + 5
+        maxIntensity = np.max(avgIntensity) + 5
         for d in dissolve:
             if(labelCounter == 0):
                 labelCounter += 1
@@ -256,16 +249,45 @@ def localDissolveDetection(histogramDifferences, averageIntensity, grayFrames, r
 
     return(dissolve)
 
-def globalDissolveDetection(cutIndex, histogramDifferences, averageIntensity, grayFrames, n_match = 10, len_dissolve = 5, plot = False):
+def globalDissolveDetection(cutIndex, histogramDifferences, averageIntensity, grayFrames, n_match = 10, len_dissolve = 15, plot = False):
     dissolveSequences = []
 
     for i in range(len(cutIndex)-1):
         refIndex=[cutIndex[i]+1,cutIndex[i+1]-1]
-        dissolve = localDissolveDetection(histogramDifferences,averageIntensity,grayFrames,refIndex,n_match,len_dissolve,plot)
+
+        #Large enough to fit the S-G filter with a window length of 5
+        if(refIndex[-1]-refIndex[0]+1>5):
+            dissolve = localDissolveDetection(histogramDifferences,averageIntensity,grayFrames,refIndex,n_match,len_dissolve,plot)
+        
         for sequence in dissolve:
             dissolveSequences.append(sequence)
 
     return(dissolveSequences)
+
+def extractShots(cutIndex,dissolveSequences):
+    shots=[]
+
+    if(len(dissolveSequences)==0):
+        for i in range(len(cutIndex)-1):
+            shots.append([cutIndex[i],cutIndex[i+1]])
+    else:
+        for i in range(len(cutIndex)-1):
+            for j in range(len(dissolveSequences)):
+                if(dissolveSequences[j][0]>cutIndex[i] and dissolveSequences[j][0]<cutIndex[i+1]):
+                    if(len(shots) == 0 or shots[-1][-1]==cutIndex[i]):
+                        shots.append([cutIndex[i],dissolveSequences[j][0]])
+                        if(j<len(dissolveSequences)-1 and dissolveSequences[j+1][0]<cutIndex[i+1]):
+                            shots.append([dissolveSequences[j][-1],dissolveSequences[j+1][0]])
+                    elif(j<len(dissolveSequences)-1 and dissolveSequences[j+1][0]<cutIndex[i+1]):
+                        shots.append([dissolveSequences[j][-1],dissolveSequences[j+1][0]])
+                    else:
+                        shots.append([dissolveSequences[j][-1],cutIndex[i+1]])
+                else:
+                    shots.append([cutIndex[i],cutIndex[i+1]])
+                    break
+    print("Identified shots : ")
+    print(shots)
+    return(shots)
 
 def extractShots(cutIndex,dissolveSequences):
     shots=[]
@@ -334,7 +356,6 @@ def histogram2d_Vx_Vy(flow) :
 	#hist = cv2.cvtColor(normalize(hist).astype('float32'), cv2.COLOR_GRAY2BGR)
 	hist = normalize(hist).astype('float32')
 	return hist
-
 
 #####################SHOT-IDENTIFICATION######################################################
 
@@ -580,7 +601,7 @@ while(ret and counter<500):
         #Update in color - not recommanded
         #im.set_data(normalise(h1))
         #Update in gray scale
-        cv2.imshow('Color histogram',h1)
+        #cv2.imshow('Color histogram',h1)
 
     else:
         #Compute 1D-histogram
@@ -634,7 +655,7 @@ while(ret and counter<500):
     prevFrame = frame_gray
     
     #Display frame
-    #cv2.imshow("Film",frame)
+    cv2.imshow("Film",frame)
 
     k = cv2.waitKey(15) & 0xff
     if k == 27:
@@ -647,5 +668,4 @@ dissolveSequences = globalDissolveDetection(cutIndex,differences,avgIntensity,al
 shots = extractShots(cutIndex,dissolveSequences)
 identification = shotsIdentification(shots,allFlow)
 keyFrame = keyFrameExtraction(allFrames,shots) 
-
 
